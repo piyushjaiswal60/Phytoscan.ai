@@ -8,6 +8,7 @@ class Settings(BaseSettings):
     DEBUG: bool = True
 
     # Model Settings
+    # These paths are relative to the project root
     CUSTOM_MODEL_PATH: str = "models/best_custom_cnn.keras"
     MOBILENET_MODEL_PATH: str = "models/mobilenetv2.keras"
     LABELS_PATH: str = "labels.json"
@@ -16,7 +17,9 @@ class Settings(BaseSettings):
     CORS_ORIGINS: List[str] = ["*"]
     MAX_UPLOAD_SIZE: int = 5 * 1024 * 1024  # 5MB
 
-    class Config:
-        env_file = ".env"
+    model_config = {
+        "env_file": ".env",
+        "extra": "ignore"
+    }
 
 settings = Settings()

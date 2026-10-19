@@ -46,5 +46,15 @@ rough.md
 SMOKE_TEST.md
 AUDIT.md
 
+# Python generated files
+__pycache__/
+*.py[cod]
+.pytest_cache/
+
+# Frontend generated files
+node_modules/
+dist/
+
+
 # ML Models (Optional: uncomment if you want to keep large models out of Git)
 # models/*.keras

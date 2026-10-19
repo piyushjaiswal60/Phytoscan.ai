@@ -1,15 +1,9 @@
 import React, { useState } from 'react';
-import { Upload, Scan, Sun, Moon, Leaf, AlertCircle, CheckCircle2, XCircle, Loader2 } from 'lucide-react';
+import { Scan, Sun, Moon, Leaf, AlertCircle, CheckCircle2, XCircle, Loader2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { clsx, type ClassValue } from 'clsx';
-import { twMerge } from 'tailwind-merge';
+import { cn } from './utils';
 import { Prediction, PredictionResponse, CompareResponse } from './types';
-
-function cn(...inputs: ClassValue[]) {
-  return twMerge(clsx(inputs));
-}
-
-// --- Components ---
+import { ImageUpload } from './components/ImageUpload';
 
 const ThemeToggle = ({ isDark, toggle }: { isDark: boolean; toggle: () => void }) => (
   <button
@@ -89,43 +83,8 @@ export default function App() {
     setResults(null);
   };
 
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      // 1. Validate File Type (MIME type)
-      const validImageTypes = ['image/jpeg', 'image/png', 'image/jpg'];
-      if (!validImageTypes.includes(file.type)) {
-        setError("Invalid file type. Please upload a correct image file (JPEG or PNG).");
-        setPreview(null);
-        setImage(null);
-        e.target.value = ''; // Reset input so same file can be selected again
-        return;
-      }
-
-      // 2. Validate File Size
-      if (file.size > 5 * 1024 * 1024) {
-        setError("Image too large. Max 5MB.");
-        setPreview(null);
-        setImage(null);
-        e.target.value = '';
-        return;
-      }
-      setImage(file);
-      setPreview(URL.createObjectURL(file));
-      setResults(null);
-      setError(null);
-    }
-  };
-
   const runScan = async () => {
     if (!image) return;
-
-    // Double-check file type before sending to server
-    const validImageTypes = ['image/jpeg', 'image/png', 'image/jpg'];
-    if (!validImageTypes.includes(image.type)) {
-      setError("Invalid file type. Please upload a correct image file (JPEG or PNG).");
-      return;
-    }
 
     setIsLoading(true);
     setError(null);
@@ -179,44 +138,23 @@ export default function App() {
       </header>
 
       <main className="max-w-3xl mx-auto px-4 py-12 space-y-12">
-        {/* Step 1: Upload Section */}
         <section className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-700">
           <div className="flex items-center gap-3 mb-2">
             <span className="flex items-center justify-center w-8 h-8 rounded-full bg-primary-500 text-white text-sm font-bold">1</span>
             <h3 className="text-xl font-semibold">Upload Plant Image</h3>
           </div>
           <div className="card p-6 space-y-6">
-            <div className="relative group">
-              <div className={cn(
-                "aspect-video rounded-2xl border-2 border-dashed transition-all duration-300 flex flex-col items-center justify-center overflow-hidden relative bg-slate-50 dark:bg-slate-900/50",
-                preview ? "border-transparent shadow-inner" : "border-slate-300 dark:border-slate-700 hover:border-primary-500 hover:bg-primary-50/50 dark:hover:bg-primary-900/10"
-              )}>
-                {preview ? (
-                  <>
-                    <img src={preview} alt="Preview" className="w-full h-full object-cover" />
-                    <button
-                      onClick={() => {setPreview(null); setImage(null); setResults(null);}}
-                      className="absolute top-3 right-3 p-2 bg-white/90 dark:bg-slate-800/90 backdrop-blur text-rose-500 rounded-full shadow-lg hover:bg-rose-500 hover:text-white transition-all duration-300"
-                    >
-                      <XCircle size={20} />
-                    </button>
-                  </>
-                ) : (
-                  <label className="flex flex-col items-center cursor-pointer p-12 text-center">
-                    <div className="w-16 h-16 bg-primary-100 dark:bg-primary-900/30 rounded-full flex items-center justify-center mb-4 transition-transform group-hover:scale-110">
-                      <Upload className="w-8 h-8 text-primary-500" />
-                    </div>
-                    <span className="font-medium text-slate-600 dark:text-slate-400 mb-1">Click to upload or drag & drop</span>
-                    <span className="text-xs text-slate-400">Supports JPEG, PNG (Max 5MB)</span>
-                    <input type="file" className="hidden" accept="image/jpeg,image/png,image/jpg" onChange={handleImageUpload} />
-                  </label>
-                )}
-              </div>
-            </div>
+            <ImageUpload
+              image={image}
+              setImage={setImage}
+              preview={preview}
+              setPreview={setPreview}
+              error={error}
+              setError={setError}
+            />
           </div>
         </section>
 
-        {/* Step 2: Model Configuration */}
         <section className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-700" style={{ animationDelay: '200ms' }}>
           <div className="flex items-center gap-3 mb-2">
             <span className="flex items-center justify-center w-8 h-8 rounded-full bg-primary-500 text-white text-sm font-bold">2</span>
@@ -243,7 +181,6 @@ export default function App() {
           </div>
         </section>
 
-        {/* Step 3: Results Section */}
         <section className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-700" style={{ animationDelay: '400ms' }}>
           <div className="flex items-center gap-3 mb-2">
             <span className="flex items-center justify-center w-8 h-8 rounded-full bg-primary-500 text-white text-sm font-bold">3</span>
