@@ -41,5 +41,10 @@ ehthumbs.db
 *.swp
 *.swo
 
+# Project Documentation/Drafts
+rough.md
+SMOKE_TEST.md
+AUDIT.md
+
 # ML Models (Optional: uncomment if you want to keep large models out of Git)
 # models/*.keras

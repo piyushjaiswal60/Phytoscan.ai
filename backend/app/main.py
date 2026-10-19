@@ -39,8 +39,9 @@ async def predict(
     model: str = Query(..., regex="^(custom_cnn|mobilenetv2)$")
 ):
     # Validate file type
-    if file.content_type not in ["image/jpeg", "image/png"]:
-        raise HTTPException(status_code=400, detail="Invalid file type. Only JPEG and PNG are supported.")
+    if file.content_type not in ["image/jpeg", "image/png", "image/jpg"]:
+        print(f"DEBUG: Rejected file with content_type: {file.content_type}")
+        raise HTTPException(status_code=400, detail=f"Invalid file type ({file.content_type}). Only JPEG and PNG are supported.")
 
     # Validate file size
     contents = await file.read()
@@ -55,8 +56,9 @@ async def predict(
 
 @app.post("/predict/compare", response_model=CompareResponse)
 async def compare_predict(file: UploadFile = File(...)):
-    if file.content_type not in ["image/jpeg", "image/png"]:
-        raise HTTPException(status_code=400, detail="Invalid file type.")
+    if file.content_type not in ["image/jpeg", "image/png", "image/jpg"]:
+        print(f"DEBUG: Rejected file with content_type: {file.content_type}")
+        raise HTTPException(status_code=400, detail=f"Invalid file type ({file.content_type}).")
 
     contents = await file.read()
     if len(contents) > settings.MAX_UPLOAD_SIZE:

@@ -92,8 +92,22 @@ export default function App() {
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
+      // 1. Validate File Type (MIME type)
+      const validImageTypes = ['image/jpeg', 'image/png', 'image/jpg'];
+      if (!validImageTypes.includes(file.type)) {
+        setError("Invalid file type. Please upload a correct image file (JPEG or PNG).");
+        setPreview(null);
+        setImage(null);
+        e.target.value = ''; // Reset input so same file can be selected again
+        return;
+      }
+
+      // 2. Validate File Size
       if (file.size > 5 * 1024 * 1024) {
         setError("Image too large. Max 5MB.");
+        setPreview(null);
+        setImage(null);
+        e.target.value = '';
         return;
       }
       setImage(file);
@@ -105,6 +119,14 @@ export default function App() {
 
   const runScan = async () => {
     if (!image) return;
+
+    // Double-check file type before sending to server
+    const validImageTypes = ['image/jpeg', 'image/png', 'image/jpg'];
+    if (!validImageTypes.includes(image.type)) {
+      setError("Invalid file type. Please upload a correct image file (JPEG or PNG).");
+      return;
+    }
+
     setIsLoading(true);
     setError(null);
 
@@ -186,7 +208,7 @@ export default function App() {
                     </div>
                     <span className="font-medium text-slate-600 dark:text-slate-400 mb-1">Click to upload or drag & drop</span>
                     <span className="text-xs text-slate-400">Supports JPEG, PNG (Max 5MB)</span>
-                    <input type="file" className="hidden" accept="image/*" onChange={handleImageUpload} />
+                    <input type="file" className="hidden" accept="image/jpeg,image/png,image/jpg" onChange={handleImageUpload} />
                   </label>
                 )}
               </div>
@@ -231,13 +253,23 @@ export default function App() {
             <AnimatePresence mode="wait">
               {error && (
                 <motion.div
-                  initial={{ opacity: 0, scale: 0.95 }}
-                  animate={{ opacity: 1, scale: 1 }}
+                  initial={{ opacity: 0, y: -20 }}
+                  animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, scale: 0.95 }}
-                  className="p-4 rounded-2xl bg-rose-50 dark:bg-rose-900/20 border border-rose-200 dark:border-rose-800 text-rose-600 dark:text-rose-400 flex items-center gap-3"
+                  className="p-4 rounded-2xl bg-rose-50 dark:bg-rose-900/20 border-2 border-rose-200 dark:border-rose-800 text-rose-600 dark:text-rose-400 flex items-center justify-between gap-3 shadow-lg shadow-rose-500/10"
                 >
-                  <AlertCircle size={20} />
-                  <span className="text-sm font-medium">{error}</span>
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 bg-rose-100 dark:bg-rose-800 rounded-lg">
+                      <AlertCircle size={20} />
+                    </div>
+                    <span className="text-sm font-bold">{error}</span>
+                  </div>
+                  <button
+                    onClick={() => setError(null)}
+                    className="p-1 hover:bg-rose-200 dark:hover:bg-rose-800 rounded-full transition-colors"
+                  >
+                    <XCircle size={18} />
+                  </button>
                 </motion.div>
               )}
               {!results && !isLoading && !error && (
