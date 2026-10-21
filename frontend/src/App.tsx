@@ -131,7 +131,7 @@ export default function App() {
             <Leaf size={24} />
           </div>
           <span className="bg-clip-text text-transparent bg-gradient-to-r from-primary-600 to-primary-400 dark:from-primary-400 dark:to-primary-200">
-            PhytoScan AI
+            PhytoScan.AI
           </span>
         </div>
         <ThemeToggle isDark={isDark} toggle={() => setIsDark(!isDark)} />
