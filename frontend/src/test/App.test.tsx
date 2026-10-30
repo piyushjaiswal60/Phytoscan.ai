@@ -9,7 +9,7 @@ global.URL.createObjectURL = mockCreateObjectURL;
 describe('App Component', () => {
   it('renders the main title and upload section', () => {
     render(<App />);
-    expect(screen.getByText(/PhytoScan AI/i)).toBeInTheDocument();
+    expect(screen.getByText(/PhytoScan\.AI/i)).toBeInTheDocument();
     expect(screen.getByText(/Upload Plant Image/i)).toBeInTheDocument();
   });
 
