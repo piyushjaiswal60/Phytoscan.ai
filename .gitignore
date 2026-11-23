@@ -1,61 +1,60 @@
-# Dependency directories
-node_modules/
-jspm_dependencies/
-.pnp/
-.pnp.lua
 
-# Virtual Environments
+# ==============================
+# PYTHON
+# ==============================
 .venv/
 venv/
 env/
-phytoscan/
-
-# Build outputs
-dist/
-build/
-out/
-.vite/
-
-# Environment variables
-.env
-.env.local
-.env.development.local
-.env.test.local
-.env.production.local
-
-# Logs
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-logs
-*.log
-
-# OS files
-.DS_Store
-Thumbs.db
-ehthumbs.db
-
-# IDEs
-.vscode/
-.idea/
-*.swp
-*.swo
-
-# Project Documentation/Drafts
-rough.md
-SMOKE_TEST.md
-AUDIT.md
-PLAN.md
-
-# Python generated files
 __pycache__/
 *.py[cod]
 .pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
 
-# Frontend generated files
+# ==============================
+# NODE.JS
+# ==============================
 node_modules/
 dist/
+build/
+.vite/
+coverage/
+npm-debug.log*
+yarn-debug.log*
+pnpm-debug.log*
 
+# ==============================
+# ENVIRONMENT & SECRETS
+# ==============================
+.env
+.env.*
+!.env.example
 
-# ML Models (Optional: uncomment if you want to keep large models out of Git)
-# models/*.keras
+# ==============================
+# EDITORS & OPERATING SYSTEM
+# ==============================
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+*.log
+
+# ==============================
+# GENERATED DATA
+# ==============================
+data/
+uploads/
+outputs/
+artifacts/
+*.tmp
+*.bak
+
+# ==============================
+# PERSONAL DOCUMENTATION
+# ==============================
+README_SETUP*.md
+NOTES.local.md
+TODO.local.md
+*.local.md

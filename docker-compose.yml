@@ -1,29 +1,43 @@
-version: '3.8'
-
 services:
   backend:
     build:
       context: .
       dockerfile: backend/Dockerfile
+    image: phytoscan-backend:local
     container_name: phytoscan-backend
+    environment:
+      MAX_UPLOAD_SIZE: 5242880
+      TF_CPP_MIN_LOG_LEVEL: 2
+      TF_NUM_INTRAOP_THREADS: 2
+      TF_NUM_INTEROP_THREADS: 2
     ports:
       - "8000:8000"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=5)"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 120s
     networks:
       - phytoscan-network
-    restart: always
 
   frontend:
     build:
       context: ./frontend
       dockerfile: Dockerfile
+      args:
+        VITE_API_BASE_URL: /api
+    image: phytoscan-frontend:local
     container_name: phytoscan-frontend
     ports:
       - "3000:80"
     depends_on:
-      - backend
+      backend:
+        condition: service_healthy
+    restart: unless-stopped
     networks:
       - phytoscan-network
-    restart: always
 
 networks:
   phytoscan-network:
