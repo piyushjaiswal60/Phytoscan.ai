@@ -1,25 +1,28 @@
+"""Central application settings."""
+
 import os
-from pydantic_settings import BaseSettings
-from typing import List
+from pathlib import Path
 
-class Settings(BaseSettings):
-    # App Settings
-    APP_NAME: str = "Phytoscan AI Backend"
-    DEBUG: bool = True
 
-    # Model Settings
-    # These paths are relative to the project root
-    CUSTOM_MODEL_PATH: str = "models/best_custom_cnn.keras"
-    MOBILENET_MODEL_PATH: str = "models/mobilenetv2.keras"
-    LABELS_PATH: str = "labels.json"
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
 
-    # API Settings
-    CORS_ORIGINS: List[str] = ["*"]
-    MAX_UPLOAD_SIZE: int = 5 * 1024 * 1024  # 5MB
+APP_NAME = os.getenv("APP_NAME", "PhytoScan AI API")
+MAX_UPLOAD_SIZE = int(os.getenv("MAX_UPLOAD_SIZE", str(5 * 1024 * 1024)))
+IMAGE_SIZE = (224, 224)
 
-    model_config = {
-        "env_file": ".env",
-        "extra": "ignore"
-    }
+CUSTOM_MODEL_PATH = Path(
+    os.getenv("CUSTOM_MODEL_PATH", PROJECT_ROOT / "models" / "best_custom_cnn.keras")
+)
+MOBILENET_MODEL_PATH = Path(
+    os.getenv("MOBILENET_MODEL_PATH", PROJECT_ROOT / "models" / "mobilenetv2.keras")
+)
+LABELS_PATH = Path(os.getenv("LABELS_PATH", PROJECT_ROOT / "labels.json"))
 
-settings = Settings()
+CORS_ORIGINS = [
+    origin.strip()
+    for origin in os.getenv(
+        "CORS_ORIGINS",
+        "http://localhost:5173,http://127.0.0.1:5173",
+    ).split(",")
+    if origin.strip()
+]

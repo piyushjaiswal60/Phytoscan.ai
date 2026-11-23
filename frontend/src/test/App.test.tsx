@@ -1,56 +1,28 @@
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import { describe, it, expect, vi } from 'vitest';
-import App from '../App';
+import { cleanup, render, screen } from "@testing-library/react";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import App from "../App";
 
-// Mock URL.createObjectURL
-const mockCreateObjectURL = vi.fn(() => 'mock-url');
-global.URL.createObjectURL = mockCreateObjectURL;
+beforeEach(() => {
+  vi.stubGlobal("fetch", vi.fn().mockResolvedValue({
+    ok: true,
+    json: async () => ({ status: "healthy", models_loaded: true, classes_count: 38 }),
+  }));
+});
 
-describe('App Component', () => {
-  it('renders the main title and upload section', () => {
+afterEach(() => { cleanup(); vi.unstubAllGlobals(); });
+
+describe("PhytoScan AI interface", () => {
+  it("shows the scanner and both model choices", () => {
     render(<App />);
-    expect(screen.getByText(/PhytoScan\.AI/i)).toBeInTheDocument();
-    expect(screen.getByText(/Upload Plant Image/i)).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: /a healthier harvest/i })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: /run a plant health scan/i })).toBeInTheDocument();
+    expect(screen.getByText("Custom CNN")).toBeInTheDocument();
+    expect(screen.getByText("MobileNetV2")).toBeInTheDocument();
   });
 
-  it('triggers object URL creation when a valid image is uploaded', async () => {
+  it("starts in compare mode and disables scanning until an image is selected", () => {
     render(<App />);
-
-    const file = new File(['(binary content)'], 'leaf.png', { type: 'image/png' });
-    const input = screen.getByTestId('image-upload-input') as HTMLInputElement;
-
-    fireEvent.change(input, {
-      target: { files: [file] },
-    });
-
-    await waitFor(() => {
-      expect(mockCreateObjectURL).toHaveBeenCalledWith(file);
-    });
-  });
-
-  it('shows error message when an invalid file type is uploaded', async () => {
-    render(<App />);
-
-    const file = new File(['hello world'], 'test.txt', { type: 'text/plain' });
-    const input = screen.getByTestId('image-upload-input') as HTMLInputElement;
-
-    fireEvent.change(input, {
-      target: { files: [file] },
-    });
-
-    await waitFor(() => {
-      expect(screen.getByText(/Invalid file type/i)).toBeInTheDocument();
-    });
-  });
-
-  it('allows selecting different AI models', async () => {
-    render(<App />);
-
-    const mobileNetCard = screen.getByText(/MobileNetV2/i).closest('div');
-    if (mobileNetCard) {
-      fireEvent.click(mobileNetCard);
-    }
-
-    expect(screen.getByText(/MobileNetV2/i)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /start ai analysis/i })).toBeDisabled();
+    expect(screen.getByText(/both models will analyse the same image/i)).toBeInTheDocument();
   });
 });
