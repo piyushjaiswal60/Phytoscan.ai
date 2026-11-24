@@ -140,11 +140,30 @@ jobs:
             phytoscan-network:
               driver: bridge
           COMPOSE
-          cd "\$APP_DIR"
+          
+          cd "$APP_DIR"
+
+          # Pull new images before stopping the old application
           sudo docker compose -f compose.yml pull
+
+          # Remove previous containers that use the same names.
+          # Their Docker images are retained for rollback.
+          for container in phytoscan-frontend phytoscan-backend; do
+            if sudo docker container inspect "$container" >/dev/null 2>&1; then
+              echo "Replacing old container: $container"
+              sudo docker rm -f "$container"
+            fi
+          done
+
+          # Start the new application
           sudo docker compose -f compose.yml up -d --remove-orphans
+
+          # Remove dangling images only
           sudo docker image prune -f
+
+          # Display deployment status
           sudo docker compose -f compose.yml ps
+
           REMOTE
           )
           jq -n \
