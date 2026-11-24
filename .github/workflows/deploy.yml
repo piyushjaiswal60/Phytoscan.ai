@@ -1,3 +1,4 @@
+
 name: Build, Publish and Deploy Phytoscan
 
 on:
@@ -21,35 +22,44 @@ jobs:
        github.event.workflow_run.event == 'push' &&
        github.event.workflow_run.head_branch == 'main' &&
        github.event.workflow_run.head_repository.full_name == github.repository)
+
     runs-on: ubuntu-latest
+
     outputs:
       image_tag: ${{ steps.meta.outputs.image_tag }}
       image_owner: ${{ steps.meta.outputs.image_owner }}
+
     steps:
       - name: Check out the tested commit
         uses: actions/checkout@v4
         with:
           ref: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_sha || github.sha }}
+
       - name: Prepare image names
         id: meta
         shell: bash
         run: |
           OWNER="$(printf '%s' "$GITHUB_REPOSITORY_OWNER" | tr '[:upper:]' '[:lower:]')"
+
           if [ "${{ github.event_name }}" = "workflow_run" ]; then
             TAG="${{ github.event.workflow_run.head_sha }}"
           else
             TAG="${GITHUB_SHA}"
           fi
+
           echo "image_owner=$OWNER" >> "$GITHUB_OUTPUT"
           echo "image_tag=$TAG" >> "$GITHUB_OUTPUT"
+
       - name: Log in to GitHub Container Registry
         uses: docker/login-action@v3
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
+
       - name: Build and publish backend
         uses: docker/build-push-action@v6
         with:
@@ -61,6 +71,7 @@ jobs:
             ghcr.io/${{ steps.meta.outputs.image_owner }}/phytoscan-backend:latest
           cache-from: type=gha,scope=backend
           cache-to: type=gha,mode=max,scope=backend
+
       - name: Build and publish frontend
         uses: docker/build-push-action@v6
         with:
@@ -79,34 +90,43 @@ jobs:
     name: Deploy to AWS EC2 through SSM
     needs: publish-images
     runs-on: ubuntu-latest
+
     env:
       IMAGE_OWNER: ${{ needs.publish-images.outputs.image_owner }}
       IMAGE_TAG: ${{ needs.publish-images.outputs.image_tag }}
       AWS_REGION: ${{ vars.AWS_REGION }}
       INSTANCE_ID: ${{ vars.EC2_INSTANCE_ID }}
       APP_DIR: ${{ vars.EC2_APP_DIR }}
+
     steps:
       - name: Check deployment settings
         env:
           AWS_ROLE_TO_ASSUME: ${{ secrets.AWS_ROLE_TO_ASSUME }}
         run: |
-          test -n "$AWS_ROLE_TO_ASSUME" || (echo "Set the AWS_ROLE_TO_ASSUME repository secret" && exit 1)
-          test -n "$AWS_REGION" || (echo "Set the AWS_REGION repository variable" && exit 1)
-          test -n "$INSTANCE_ID" || (echo "Set the EC2_INSTANCE_ID repository variable" && exit 1)
-          test -n "$APP_DIR" || (echo "Set the EC2_APP_DIR repository variable" && exit 1)
+          test -n "$AWS_ROLE_TO_ASSUME" || (echo "Set AWS_ROLE_TO_ASSUME secret" && exit 1)
+          test -n "$AWS_REGION" || (echo "Set AWS_REGION variable" && exit 1)
+          test -n "$INSTANCE_ID" || (echo "Set EC2_INSTANCE_ID variable" && exit 1)
+          test -n "$APP_DIR" || (echo "Set EC2_APP_DIR variable" && exit 1)
+
       - name: Configure AWS credentials using GitHub OIDC
         uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ secrets.AWS_ROLE_TO_ASSUME }}
           aws-region: ${{ vars.AWS_REGION }}
+
       - name: Deploy containers using AWS Systems Manager
         shell: bash
         run: |
           set -euo pipefail
+
           REMOTE_SCRIPT=$(cat <<REMOTE
           set -euo pipefail
+
           APP_DIR='${APP_DIR}'
+
+          echo "Creating application directory..."
           sudo mkdir -p "\$APP_DIR"
+
           sudo tee "\$APP_DIR/compose.yml" >/dev/null <<'COMPOSE'
           services:
             backend:
@@ -125,6 +145,7 @@ jobs:
                 start_period: 120s
               networks:
                 - phytoscan-network
+
             frontend:
               image: ghcr.io/${IMAGE_OWNER}/phytoscan-frontend:${IMAGE_TAG}
               container_name: phytoscan-frontend
@@ -136,54 +157,78 @@ jobs:
                   condition: service_healthy
               networks:
                 - phytoscan-network
+
           networks:
             phytoscan-network:
               driver: bridge
           COMPOSE
-          
-          cd "$APP_DIR"
 
-          # Pull new images before stopping the old application
+          cd "\$APP_DIR"
+
+          echo "Pulling new Docker images..."
           sudo docker compose -f compose.yml pull
 
-          # Remove previous containers that use the same names.
-          # Their Docker images are retained for rollback.
+          echo "Removing previous containers..."
+
           for container in phytoscan-frontend phytoscan-backend; do
-            if sudo docker container inspect "$container" >/dev/null 2>&1; then
-              echo "Replacing old container: $container"
-              sudo docker rm -f "$container"
+            if sudo docker container inspect "\$container" >/dev/null 2>&1; then
+              echo "Replacing old container: \$container"
+              sudo docker rm -f "\$container"
             fi
           done
 
-          # Start the new application
+          echo "Starting new application..."
           sudo docker compose -f compose.yml up -d --remove-orphans
 
-          # Remove dangling images only
+          echo "Removing dangling images..."
           sudo docker image prune -f
 
-          # Display deployment status
+          echo "Checking deployment status..."
           sudo docker compose -f compose.yml ps
 
           REMOTE
           )
+
           jq -n \
             --arg instance "$INSTANCE_ID" \
             --arg command "$REMOTE_SCRIPT" \
-            '{DocumentName:"AWS-RunShellScript",InstanceIds:[$instance],Parameters:{commands:[$command]},Comment:"Deploy PhytoScan AI"}' \
-            > /tmp/ssm-command.json
+            '{
+              DocumentName: "AWS-RunShellScript",
+              InstanceIds: [$instance],
+              Parameters: {
+                commands: [$command]
+              },
+              Comment: "Deploy PhytoScan AI"
+            }' > /tmp/ssm-command.json
+
+          echo "Sending deployment command to EC2..."
+
           COMMAND_ID=$(aws ssm send-command \
             --cli-input-json file:///tmp/ssm-command.json \
-            --query 'Command.CommandId' --output text)
+            --query 'Command.CommandId' \
+            --output text)
+
           echo "SSM command: $COMMAND_ID"
-          aws ssm wait command-executed --command-id "$COMMAND_ID" --instance-id "$INSTANCE_ID" || true
+
+          aws ssm wait command-executed \
+            --command-id "$COMMAND_ID" \
+            --instance-id "$INSTANCE_ID" || true
+
           aws ssm get-command-invocation \
-            --command-id "$COMMAND_ID" --instance-id "$INSTANCE_ID" \
+            --command-id "$COMMAND_ID" \
+            --instance-id "$INSTANCE_ID" \
             --query '{Status:Status,Output:StandardOutputContent,Error:StandardErrorContent}' \
             --output json
+
           STATUS=$(aws ssm get-command-invocation \
-            --command-id "$COMMAND_ID" --instance-id "$INSTANCE_ID" \
-            --query 'Status' --output text)
+            --command-id "$COMMAND_ID" \
+            --instance-id "$INSTANCE_ID" \
+            --query 'Status' \
+            --output text)
+
           if [ "$STATUS" != "Success" ]; then
             echo "Deployment failed: $STATUS"
             exit 1
           fi
+
+          echo "PhytoScan deployment completed successfully!"
